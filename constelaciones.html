@@ -5,6 +5,10 @@
     <title>Titulo</title>
     <script src="estrellas.js"></script>
 </head>
+<form id="formHora" action="">
+    <input id="hora" type="time">
+    <input type="submit" onclick="cambiarHora()">
+</form>
 <body>
 <canvas id="canvas" width="700" height="700">
 </canvas>
@@ -12,9 +16,22 @@
     var canvas;
     var ctx;
     var escala = 350/90;
+    var lat;
+    var lon;
+    var hora;
+    var listaEstrellas = new Array();
     window.onload = inicializar;
 
     function inicializar() {
+        var f=new Date();
+        hora = f.getHours();
+        if (navigator.geolocation){
+            navigator.geolocation.getCurrentPosition(getPosicion);
+        }
+
+    }
+    function getPosicion(position){
+        lat = position.coords.latitude;
         canvas = document.getElementById("canvas");
         ctx = canvas.getContext("2d");
         //Dibujar círculo donde va
@@ -25,14 +42,28 @@
         ctx.fill();
         ctx.stroke();
         ctx.closePath();
+        // Dibujo de estrellas y constelaciones
+        prepararEstrellas();
         dibujarEstrellas();
         dibujarLineas();
+    }
+
+    function prepararEstrellas(){
+        for (i=0; i<estrellas.length; i++){
+            var convertido = traslacion(parseFloat(estrellas[i].RAN), parseFloat(estrellas[i].DECN));
+            var estrella = new Object();
+            estrella.nombre = estrellas[i].NAME;
+            estrella.constelacion = estrellas[i].CON;
+            estrella.x = convertido[0];
+            estrella.y = convertido[1];
+            listaEstrellas.push(estrella);
+        }
     }
     function dibujarEstrellas() {
 
         for (i=0; i<estrellas.length; i++){
             var ran = parseFloat(estrellas[i].RAN*escala)+350;
-            var decn = parseFloat(estrellas[i].DECN*escala)+350;
+            var decn = parseFloat(estrellas[i].DECN*escala)+350-parseFloat(lat)*(350/90);
             var mag = parseFloat(estrellas[i].MAG);
 
             var radio = 0;
@@ -72,10 +103,10 @@
                     //3. Dibujar línea
                     ctx.beginPath();
                     var x = (ranactual*escala)+350;
-                    var y = (decnactual*escala)+350;
+                    var y = (decnactual*escala)+350-parseFloat(lat)*(350/90);
                     ctx.moveTo(x,y);
                     var x1 = (ransig*escala)+350;
-                    var y1 = (decnsig*escala)+350;
+                    var y1 = (decnsig*escala)+350-parseFloat(lat)*(350/90);
                     ctx.lineTo(x1,y1);
                     ctx.strokeStyle="white";
                     ctx.stroke();
@@ -87,6 +118,24 @@
             }
         }
     }
+    function cambiarHora() {
+        var nuevahora = document.forms["formHora"]["hora"].value;
+        alert("Nueva hora "+nuevahora);
+    }
+
+    function traslacion(ran, decn){
+        var convertido=[ran,decn];
+        var a=350;
+        var b=350/90*lat;
+        var f=new Date();
+        var alfa=(360/24) * hora;
+        alfa=alfa*Math.PI/180;
+        convertido[0]=(ran-a)*Math.cos(alfa)-(decn-b)*Math.sin(alfa)+a;
+        convertido[1]=(ran-a)*Math.sin(alfa)+(decn-b)*Math.cos(alfa)+b;
+        alert("x = "+convertido[0]+" y = "+convertido[1]);
+        return convertido;
+    }
+
 </script>
 
 </body>
