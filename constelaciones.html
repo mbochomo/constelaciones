@@ -6,8 +6,33 @@
     <script src="estrellas.js"></script>
 </head>
 <form id="formHora" action="">
-    <input id="hora" type="time">
-    <input type="submit" onclick="cambiarHora()">
+    <h1 id="latlon"></h1>
+    <select name="hora" onchange="cambiarHora()">
+        <option value="0">0</option>
+        <option value="1">1</option>
+        <option value="2">2</option>
+        <option value="3">3</option>
+        <option value="4">4</option>
+        <option value="5">5</option>
+        <option value="6">6</option>
+        <option value="7">7</option>
+        <option value="8">8</option>
+        <option value="9">9</option>
+        <option value="10">10</option>
+        <option value="11">11</option>
+        <option value="12">12</option>
+        <option value="13">13</option>
+        <option value="14">14</option>
+        <option value="15">15</option>
+        <option value="16">16</option>
+        <option value="17">17</option>
+        <option value="18">18</option>
+        <option value="19">19</option>
+        <option value="20">20</option>
+        <option value="21">21</option>
+        <option value="22">22</option>
+        <option value="23">23</option>
+    </select>
 </form>
 <body>
 <canvas id="canvas" width="700" height="700">
@@ -19,19 +44,47 @@
     var lat;
     var lon;
     var hora;
-    var listaEstrellas = new Array();
     window.onload = inicializar;
 
     function inicializar() {
         var f=new Date();
         hora = f.getHours();
+
         if (navigator.geolocation){
             navigator.geolocation.getCurrentPosition(getPosicion);
+        }
+        else{
+            alert("hola?");
+            var req = new XMLHttpRequest();
+            req.open('GET', 'http://ip-api.com/json', false);
+            req.send(null);
+            if(req.status == 200) {
+                alert(req.responseText);
+                var info = JSON.parse(req.responseText);
+                lat = info.lat;
+                lon = info.lon;
+                var h1 = document.getElementById("latlon");
+                h1.innerHTML="Latitud: "+lat+". Longitud: "+lon;
+                // Dibujo de estrellas y constelaciones
+                circulo();
+                dibujarEstrellas();
+                dibujarLineas();
+            }
         }
 
     }
     function getPosicion(position){
         lat = position.coords.latitude;
+        lon = position.coords.longitude;
+        var h1 = document.getElementById("latlon");
+        h1.innerHTML="Latitud: "+lat+". Longitud: "+lon;
+        // Dibujo de estrellas y constelaciones
+        circulo();
+        dibujarEstrellas();
+        dibujarLineas();
+    }
+
+    function circulo() {
         canvas = document.getElementById("canvas");
         ctx = canvas.getContext("2d");
         //Dibujar círculo donde va
@@ -42,30 +95,15 @@
         ctx.fill();
         ctx.stroke();
         ctx.closePath();
-        // Dibujo de estrellas y constelaciones
-        prepararEstrellas();
-        dibujarEstrellas();
-        dibujarLineas();
-    }
-
-    function prepararEstrellas(){
-        for (i=0; i<estrellas.length; i++){
-            var convertido = traslacion(parseFloat(estrellas[i].RAN), parseFloat(estrellas[i].DECN));
-            var estrella = new Object();
-            estrella.nombre = estrellas[i].NAME;
-            estrella.constelacion = estrellas[i].CON;
-            estrella.x = convertido[0];
-            estrella.y = convertido[1];
-            listaEstrellas.push(estrella);
-        }
     }
     function dibujarEstrellas() {
 
         for (i=0; i<estrellas.length; i++){
-            var ran = parseFloat(estrellas[i].RAN*escala)+350;
+            var ran = (estrellas[i].RAN*escala)+350;
             var decn = parseFloat(estrellas[i].DECN*escala)+350-parseFloat(lat)*(350/90);
             var mag = parseFloat(estrellas[i].MAG);
 
+            var convertido = traslacion(ran, decn);
             var radio = 0;
             if(mag<4 && mag >2){
                 radio=1;
@@ -82,7 +120,7 @@
             ctx.beginPath();
             ctx.fillStyle="white";
             ctx.strokeStyle="white";
-            ctx.arc(ran, decn, radio, 0, 2*Math.PI);
+            ctx.arc(convertido[0], convertido[1], radio, 0, 2*Math.PI);
             ctx.fill();
             ctx.stroke();
             ctx.closePath();
@@ -104,10 +142,12 @@
                     ctx.beginPath();
                     var x = (ranactual*escala)+350;
                     var y = (decnactual*escala)+350-parseFloat(lat)*(350/90);
-                    ctx.moveTo(x,y);
+                    var convertido = traslacion(x, y);
+                    ctx.moveTo(convertido[0], convertido[1]);
                     var x1 = (ransig*escala)+350;
                     var y1 = (decnsig*escala)+350-parseFloat(lat)*(350/90);
-                    ctx.lineTo(x1,y1);
+                    convertido = traslacion(x1, y1);
+                    ctx.lineTo(convertido[0],convertido[1]);
                     ctx.strokeStyle="white";
                     ctx.stroke();
                     ctx.closePath();
@@ -120,7 +160,10 @@
     }
     function cambiarHora() {
         var nuevahora = document.forms["formHora"]["hora"].value;
-        alert("Nueva hora "+nuevahora);
+        hora = parseFloat(nuevahora);
+        circulo();
+        dibujarEstrellas();
+        dibujarLineas();
     }
 
     function traslacion(ran, decn){
@@ -128,11 +171,10 @@
         var a=350;
         var b=350/90*lat;
         var f=new Date();
-        var alfa=(360/24) * hora;
+        var alfa=(360/24) * parseFloat(hora);
         alfa=alfa*Math.PI/180;
         convertido[0]=(ran-a)*Math.cos(alfa)-(decn-b)*Math.sin(alfa)+a;
         convertido[1]=(ran-a)*Math.sin(alfa)+(decn-b)*Math.cos(alfa)+b;
-        alert("x = "+convertido[0]+" y = "+convertido[1]);
         return convertido;
     }
 
